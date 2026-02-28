@@ -1,0 +1,20 @@
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.backends"
+
+[project]
+name = "mycoder"
+version = "0.1.0"
+description = "A terminal CLI coding assistant powered by Claude"
+requires-python = ">=3.11"
+dependencies = [
+    "anthropic>=0.40.0",
+    "prompt-toolkit>=3.0.0",
+    "rich>=13.0.0",
+]
+
+[project.scripts]
+mycoder = "mycoder.cli:main"
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
