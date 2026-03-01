@@ -11,7 +11,7 @@ class SessionStore:
         if base_dir is None:
             base_dir = Path.home() / ".mycoder" / "sessions"
         self.base_dir = Path(base_dir)
-        self.base_dir.mkdir(parents=True, exist_ok=True)
+        self.base_dir.mkdir(parents=True, exist_ok=True, mode=0o700)
 
     def new_session(self, model: str, cwd: str) -> dict:
         return {
@@ -25,6 +25,7 @@ class SessionStore:
     def save(self, session: dict) -> Path:
         path = self.base_dir / f"{session['id']}.json"
         path.write_text(json.dumps(session, indent=2, default=str))
+        path.chmod(0o600)
         return path
 
     def load(self, session_id: str) -> dict | None:

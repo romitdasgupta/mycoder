@@ -1,5 +1,6 @@
 """CLI REPL — interactive terminal interface with streaming output."""
 
+import argparse
 import os
 import sys
 from prompt_toolkit import PromptSession
@@ -71,19 +72,32 @@ def handle_command(cmd: str, session: dict, store: SessionStore, agent: Agent) -
 
 
 def main():
+    parser = argparse.ArgumentParser(
+        prog="mycoder",
+        description="A terminal CLI coding assistant powered by LLMs",
+    )
+    parser.add_argument(
+        "--safe",
+        action="store_true",
+        help="Enable safe mode: require confirmation for shell commands and restrict file access to the current directory",
+    )
+    args = parser.parse_args()
+
     cfg = load_config()
+    cwd = os.getcwd()
 
     provider = create_provider(cfg.provider, api_key=cfg.api_key, model=cfg.model)
-    registry = create_default_registry()
+    registry = create_default_registry(safe_mode=args.safe, cwd=cwd)
     agent = Agent(provider=provider, registry=registry)
     store = SessionStore()
-    session = store.new_session(model=cfg.model, cwd=os.getcwd())
+    session = store.new_session(model=cfg.model, cwd=cwd)
 
     history_path = os.path.expanduser("~/.mycoder/input_history")
     os.makedirs(os.path.dirname(history_path), exist_ok=True)
     prompt_session = PromptSession(history=FileHistory(history_path))
 
-    console.print(f"[bold]mycoder[/bold] — your coding assistant [dim]({cfg.provider}:{cfg.model})[/dim]")
+    safe_label = " [bold green]safe mode[/bold green]" if args.safe else ""
+    console.print(f"[bold]mycoder[/bold] — your coding assistant [dim]({cfg.provider}:{cfg.model})[/dim]{safe_label}")
     console.print("[dim]Type /quit to exit, /clear to reset, /resume to load last session[/dim]\n")
 
     while True:

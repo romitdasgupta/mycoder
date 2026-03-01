@@ -3,6 +3,7 @@
 import os
 import re
 from pathlib import Path
+from typing import Callable
 
 
 def read_file(data: dict) -> str:
@@ -117,3 +118,20 @@ def list_directory(data: dict) -> str:
         return "\n".join(lines) if lines else "(empty directory)"
     except Exception as e:
         return f"Error: {e}"
+
+
+def sandboxed(fn: Callable[[dict], str], cwd: str) -> Callable[[dict], str]:
+    """Wrap a file tool so all paths must resolve under *cwd*."""
+    cwd_resolved = Path(cwd).resolve()
+
+    def wrapper(data: dict) -> str:
+        if "path" in data:
+            target = Path(data["path"])
+            if not target.is_absolute():
+                target = cwd_resolved / target
+            resolved = target.resolve()
+            if not resolved.is_relative_to(cwd_resolved):
+                return f"Error: access denied — path resolves outside the project directory."
+        return fn(data)
+
+    return wrapper
