@@ -5,13 +5,18 @@ build-backend = "hatchling.build"
 [project]
 name = "mycoder"
 version = "0.1.0"
-description = "A terminal CLI coding assistant powered by Claude"
+description = "A terminal CLI coding assistant powered by LLMs"
 requires-python = ">=3.11"
 dependencies = [
     "anthropic>=0.40.0",
     "prompt-toolkit>=3.0.0",
     "rich>=13.0.0",
 ]
+
+[project.optional-dependencies]
+openai = ["openai>=1.0.0"]
+google = ["google-genai>=1.0.0"]
+all = ["openai>=1.0.0", "google-genai>=1.0.0"]
 
 [project.scripts]
 mycoder = "mycoder.cli:main"
