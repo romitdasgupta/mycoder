@@ -10,6 +10,7 @@ from rich.text import Text
 
 from mycoder.config import load_config
 from mycoder.agent import Agent
+from mycoder.providers import create_provider
 from mycoder.tools.builtin import create_default_registry
 from mycoder.memory.store import SessionStore
 
@@ -19,7 +20,6 @@ console = Console()
 
 def display_tool_call(name: str, input_data: dict, result: str) -> None:
     """Display a tool call in a formatted panel."""
-    # Summarize input
     summary_parts = []
     for k, v in input_data.items():
         s = str(v)
@@ -28,7 +28,6 @@ def display_tool_call(name: str, input_data: dict, result: str) -> None:
         summary_parts.append(f"{k}={s}")
     summary = ", ".join(summary_parts)
 
-    # Truncate result for display
     display_result = result if len(result) <= 200 else result[:197] + "..."
 
     console.print(Panel(
@@ -54,11 +53,11 @@ def handle_command(cmd: str, session: dict, store: SessionStore, agent: Agent) -
     elif cmd.startswith("/model"):
         parts = cmd.split(maxsplit=1)
         if len(parts) == 2:
-            agent.model = parts[1]
+            agent.provider.model = parts[1]
             session["model"] = parts[1]
             console.print(f"[dim]Model set to {parts[1]}[/dim]")
         else:
-            console.print(f"[dim]Current model: {agent.model}[/dim]")
+            console.print(f"[dim]Current model: {agent.provider.model}[/dim]")
     elif cmd == "/resume":
         loaded = store.load_latest()
         if loaded:
@@ -74,8 +73,9 @@ def handle_command(cmd: str, session: dict, store: SessionStore, agent: Agent) -
 def main():
     cfg = load_config()
 
+    provider = create_provider(cfg.provider, api_key=cfg.api_key, model=cfg.model)
     registry = create_default_registry()
-    agent = Agent(api_key=cfg.api_key, model=cfg.model, registry=registry)
+    agent = Agent(provider=provider, registry=registry)
     store = SessionStore()
     session = store.new_session(model=cfg.model, cwd=os.getcwd())
 
@@ -83,7 +83,7 @@ def main():
     os.makedirs(os.path.dirname(history_path), exist_ok=True)
     prompt_session = PromptSession(history=FileHistory(history_path))
 
-    console.print("[bold]mycoder[/bold] — your coding assistant")
+    console.print(f"[bold]mycoder[/bold] — your coding assistant [dim]({cfg.provider}:{cfg.model})[/dim]")
     console.print("[dim]Type /quit to exit, /clear to reset, /resume to load last session[/dim]\n")
 
     while True:
@@ -100,10 +100,8 @@ def main():
                 break
             continue
 
-        # Add user message
         session["messages"].append({"role": "user", "content": user_input})
 
-        # Run agent
         console.print()
         try:
             text, updated_messages = agent.step(
@@ -115,7 +113,6 @@ def main():
         except Exception as e:
             console.print(f"\n[red]Error: {e}[/red]\n")
 
-        # Auto-save
         store.save(session)
 
     console.print("\n[dim]Goodbye.[/dim]")
